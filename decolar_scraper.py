@@ -4,9 +4,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+import json
 
 def buscar_voo():
-    url = "https://www.decolar.com/shop/flights/results/roundtrip/SAO/RIO/2025-09-03/2025-09-09/1/0/0?from=SB&di=1#showModal"
+    url = "https://www.decolar.com/shop/flights/results/roundtrip/SAO/RIO/2025-09-08/2025-09-13/1/0/0?from=SB&di=1#showModal"
 
     # Configurações para evitar bloqueio
     options = webdriver.ChromeOptions()
@@ -26,7 +27,6 @@ def buscar_voo():
 
     driver = webdriver.Chrome(service=ChromeService(), options=options)
     driver.get(url)
-
     wait = WebDriverWait(driver, 30)
 
     # Fecha popups (cookies, anúncios, etc.)
@@ -44,13 +44,22 @@ def buscar_voo():
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.cluster-container"))
         )
         print(f"Encontrados {len(resultados)} voos")
-
+        
+        voos_extraidos = []
         for voo in resultados[:5]:  # pega só os 5 primeiros
             print("-" * 50)
             print(voo.text)
+            voos_extraidos.append(voo.text)
     except:
         print("Não foi possível capturar resultados.")
 
+    with open("dados_extraidos.json", "w", encoding="utf-8") as a:
+        json.dump(voos_extraidos, a, ensure_ascii=False, indent=4)
+
+    html_content = driver.page_source
+    with open("pagina.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+   
     time.sleep(5)
     driver.quit()
 
