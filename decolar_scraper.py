@@ -5,11 +5,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import json
+import csv
 
 def buscar_voo():
-    url = "https://www.decolar.com/shop/flights/results/roundtrip/SAO/RIO/2025-09-08/2025-09-13/1/0/0?from=SB&di=1#showModal"
+    url = "https://www.decolar.com/shop/flights/results/roundtrip/SAO/RIO/2025-09-15/2025-09-20/1/0/0?from=SB&di=1#showModal"
 
-    # Configurações para evitar bloqueio
     options = webdriver.ChromeOptions()
     options.add_argument("--start-maximized")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -17,49 +17,48 @@ def buscar_voo():
     options.add_argument("--disable-extensions")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
-
-    # User-Agent de navegador real
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     driver = webdriver.Chrome(service=ChromeService(), options=options)
     driver.get(url)
     wait = WebDriverWait(driver, 30)
 
-    # Fecha popups (cookies, anúncios, etc.)
     try:
-        popup = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Aceitar')]"))
-        )
+        popup = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Aceitar')]")))
         popup.click()
     except:
         pass
 
-    # Espera os resultados carregarem
+    voos_extraidos = []
     try:
-        resultados = wait.until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.cluster-container"))
-        )
+        resultados = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.cluster-container")))
         print(f"Encontrados {len(resultados)} voos")
         
-        voos_extraidos = []
-        for voo in resultados[:5]:  # pega só os 5 primeiros
+        for voo in resultados[:5]:
+            texto_voo = voo.text
+            voos_extraidos.append(texto_voo)
             print("-" * 50)
-            print(voo.text)
-            voos_extraidos.append(voo.text)
+            print(texto_voo)
     except:
         print("Não foi possível capturar resultados.")
 
-    with open("dados_extraidos.json", "w", encoding="utf-8") as a:
-        json.dump(voos_extraidos, a, ensure_ascii=False, indent=4)
+    # Salva os dados em JSON
+    with open("dados_extraidos.json", "w", encoding="utf-8") as f:
+        json.dump(voos_extraidos, f, ensure_ascii=False, indent=4)
+    print("\nDados salvos em dados_extraidos.json")
+
+    # Salva os dados em CSV
+    with open("dados_extraidos.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Dados do Voo"])
+        for voo in voos_extraidos:
+            writer.writerow([voo])
+    print("Dados salvos em dados_extraidos.csv")
 
     html_content = driver.page_source
     with open("pagina.html", "w", encoding="utf-8") as f:
         f.write(html_content)
-   
+    
     time.sleep(5)
     driver.quit()
 
