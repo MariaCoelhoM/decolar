@@ -7,6 +7,9 @@ from selenium.common.exceptions import TimeoutException
 import time
 import json
 import csv
+from datetime import datetime
+destinos = ["REC"]
+# destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
 
 def buscar_voo(origem, destino, data_ida, data_volta):
     """
@@ -54,6 +57,7 @@ def buscar_voo(origem, destino, data_ida, data_volta):
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.cluster-container"))
         )
 
+        
         voos_extraidos = []
         if resultados:
             print(f"Encontrados {len(resultados)} voos.")
@@ -66,18 +70,27 @@ def buscar_voo(origem, destino, data_ida, data_volta):
             print("Nenhum voo encontrado no seletor.")
 
         if voos_extraidos:
-            nome_arquivo_json = f"voos_{origem}_para_{destino}.json"
-            with open(nome_arquivo_json, "w", encoding="utf-8") as f:
-                json.dump(voos_extraidos, f, ensure_ascii=False, indent=4)
-            print(f"\nDados salvos em {nome_arquivo_json}")
+        #     nome_arquivo_json = f"voos_{origem}_para_{destino}.json"
+        #     with open(nome_arquivo_json, "w", encoding="utf-8") as f:
+        #         json.dump(voos_extraidos, f, ensure_ascii=False, indent=4)
+        #     print(f"\nDados salvos em {nome_arquivo_json}")
 
-            nome_arquivo_csv = f"voos_{origem}_para_{destino}.csv"
-            with open(nome_arquivo_csv, "w", newline="", encoding="utf-8") as f:
+            precos = voo.find_elements(By.CSS_SELECTOR, ".amount.price-amount")
+            preco_por_adulto = precos[0].text if len(precos) > 0 else "N/A"
+            total_adultos = precos[1].text if len(precos) > 1 else "N/A"
+            taxas = precos[2].text if len(precos) > 2 else "N/A"
+            preco_final = precos[3].text if len(precos) > 3 else "N/A"
+            print(f"Preço por adulto: {preco_por_adulto}, Total adultos: {total_adultos}, Taxas: {taxas}, Preço final: {preco_final}")
+           
+            # nome_arquivo_csv = f"voos_{origem}_para_{destino}.csv"
+            with open('passagens.csv', "a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
+                #writer.writeheader()
                 writer.writerow(["Dados do Voo"])
                 for voo in voos_extraidos:
                     writer.writerow([voo])
-            print(f"Dados salvos em {nome_arquivo_csv}")
+                    #writer.writerow({"ida": voo[2]})
+            print(f"Dados salvos em passagens.csv")
         else:
             print("Nenhum dado para salvar. Arquivos JSON e CSV não foram criados.")
 
@@ -89,11 +102,15 @@ def buscar_voo(origem, destino, data_ida, data_volta):
     finally:
         html_content = driver.page_source
         nome_pagina_html = f"pagina_{origem}_para_{destino}.html"
-        with open(nome_pagina_html, "w", encoding="utf-8") as f:
+        with open(nome_pagina_html, "a", encoding="utf-8") as f:
             f.write(html_content)
         
         time.sleep(5)
         driver.quit()
 
 if __name__ == "__main__":
-    buscar_voo("SAO", "RIO", "2025-09-15", "2025-09-20")
+    data_hora_atual = datetime.now()
+    print("Data e hora atuais:", data_hora_atual)
+    for destino in destinos:
+        buscar_voo("SAO", destino, "2025-12-22", "2025-12-29") 
+        buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
