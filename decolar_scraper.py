@@ -74,13 +74,41 @@ def buscar_voo(origem, destino, data_ida, data_volta):
         #     with open(nome_arquivo_json, "w", encoding="utf-8") as f:
         #         json.dump(voos_extraidos, f, ensure_ascii=False, indent=4)
         #     print(f"\nDados salvos em {nome_arquivo_json}")
+            # sigla_destino = voo.find_element(By.CSS_SELECTOR, ".different-airport").text.strip()
+            # print(f"Aeroporto: {sigla_destino}")
+            # cidade_destino = voo.find_element(By.CSS_SELECTOR, ".route-info-item-city-arrival span").text.strip()
+            # print(f"Cidade: {cidade_destino}")
+            # companhia_elem = voo.find_element(By.CSS_SELECTOR, "airline-logo img")
+            # companhia = companhia_elem.get_attribute("alt").strip() if companhia_elem else "N/A"
+            # print(f"Companhia: {companhia}")
+            # texto_voo = voo.text.lower()
+            # leave_elems = voo.find_elements(By.CSS_SELECTOR, "itinerary-element.leave .hour")
+            # hora_ida = leave_elems[0].text.strip() if leave_elems else "N/A"
 
-            precos = voo.find_elements(By.CSS_SELECTOR, ".amount.price-amount")
-            preco_por_adulto = precos[0].text if len(precos) > 0 else "N/A"
-            total_adultos = precos[1].text if len(precos) > 1 else "N/A"
-            taxas = precos[2].text if len(precos) > 2 else "N/A"
-            preco_final = precos[3].text if len(precos) > 3 else "N/A"
-            print(f"Preço por adulto: {preco_por_adulto}, Total adultos: {total_adultos}, Taxas: {taxas}, Preço final: {preco_final}")
+            # # Horário de volta
+            # arrive_elems = voo.find_elements(By.CSS_SELECTOR, "itinerary-element.arrive .hour")
+            # hora_volta = arrive_elems[0].text.strip() if arrive_elems else "N/A"
+
+
+            # print(f"Hora Ida: {hora_ida} | Hora Volta: {hora_volta}")
+            #  # Detecta escala
+            # if "direto" in texto_voo:
+            #     escala = "Direto"
+            # elif "escala" in texto_voo:
+            #     import re
+            #     match = re.search(r"(\d+)\s+escala", texto_voo)
+            #     escala = f"{match.group(1)} escala(s)" if match else "Escala"
+            # else:
+            #     escala = "N/A"
+
+            # print("Escala:", escala)
+
+            # precos = voo.find_elements(By.CSS_SELECTOR, ".amount.price-amount")
+            # preco_por_adulto = precos[0].text if len(precos) > 0 else "N/A"
+            # total_adultos = precos[1].text if len(precos) > 1 else "N/A"
+            # taxas = precos[2].text if len(precos) > 2 else "N/A"
+            # preco_final = precos[3].text if len(precos) > 3 else "N/A"
+            # print(f"Preço por adulto: {preco_por_adulto}, Total adultos: {total_adultos}, Taxas: {taxas}, Preço final: {preco_final}")
            
             # nome_arquivo_csv = f"voos_{origem}_para_{destino}.csv"
             with open('passagens.csv', "a", newline="", encoding="utf-8") as f:
@@ -113,4 +141,4 @@ if __name__ == "__main__":
     print("Data e hora atuais:", data_hora_atual)
     for destino in destinos:
         buscar_voo("SAO", destino, "2025-12-22", "2025-12-29") 
-        buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
+        #buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
