@@ -1,19 +1,21 @@
+import re
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import time
-import json
 import csv
+import os
 from datetime import datetime
+
 destinos = ["REC"]
 # destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
 
 def buscar_voo(origem, destino, data_ida, data_volta):
     """
-    Busca voos na Decolar.com para uma rota e datas especificadas.
+    Busca voos na Decolar.com para uma rota e datas especificadas e salva em CSV.
 
     Args:
         origem (str): Código IATA do aeroporto de origem (ex: 'SAO').
@@ -21,14 +23,14 @@ def buscar_voo(origem, destino, data_ida, data_volta):
         data_ida (str): Data de ida no formato 'YYYY-MM-DD' (ex: '2025-09-08').
         data_volta (str): Data de volta no formato 'YYYY-MM-DD' (ex: '2025-09-13').
     """
-    
+
     # URL reconstruída para ser idêntica à original
     url = (
         f"https://www.decolar.com/shop/flights/results/roundtrip/"
         f"{origem}/{destino}/{data_ida}/{data_volta}/1/0/0?from=SB&di=1#showModal"
     )
     
-    print(f"Buscando voos em: {url}") # Adicionado para verificar a URL
+    print(f"Buscando voos em: {url}")
 
     options = webdriver.ChromeOptions()
     options.add_argument("--start-maximized")
@@ -45,100 +47,143 @@ def buscar_voo(origem, destino, data_ida, data_volta):
 
     try:
         try:
+            # Tenta fechar o popup de cookies
             popup = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Aceitar')]")))
             popup.click()
             print("Popup de cookies fechado.")
         except TimeoutException:
             print("Nenhum popup de cookies encontrado.")
 
+        # Espera um pouco para a página carregar
         time.sleep(5)
 
+        # Encontra todos os elementos de voo na página
         resultados = wait.until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.cluster-container"))
         )
-
         
-        voos_extraidos = []
+        voos_dados = []
         if resultados:
             print(f"Encontrados {len(resultados)} voos.")
-            for voo in resultados[:5]:
-                texto_voo = voo.text
-                voos_extraidos.append(texto_voo)
+            for voo in resultados[:5]: # Limita a 5 resultados para teste
+                dados_voo = {}
+                texto_voo = voo.text.lower()
+                
+                # Extração de preços
+                try:
+                    precos = voo.find_elements(By.CSS_SELECTOR, ".amount.price-amount")
+                    if len(precos) >= 4:
+                        dados_voo["Preco_Por_Adulto"] = precos[0].text.strip()
+                        dados_voo["Total_Adultos"] = precos[1].text.strip()
+                        dados_voo["Taxas"] = precos[2].text.strip()
+                        dados_voo["Preco_Final"] = precos[3].text.strip()
+                    else:
+                        print("Aviso: Nem todos os elementos de preço foram encontrados.")
+                        dados_voo["Preco_Por_Adulto"] = "N/A"
+                        dados_voo["Total_Adultos"] = "N/A"
+                        dados_voo["Taxas"] = "N/A"
+                        dados_voo["Preco_Final"] = "N/A"
+                except NoSuchElementException:
+                    dados_voo["Preco_Por_Adulto"] = "N/A"
+                    dados_voo["Total_Adultos"] = "N/A"
+                    dados_voo["Taxas"] = "N/A"
+                    dados_voo["Preco_Final"] = "N/A"
+                    print("Erro: Preços não encontrados.")
+
+
+                try:
+                    companhia_elem = voo.find_element(By.CSS_SELECTOR, "airline-logo img")
+                    dados_voo["Companhia_Aerea"] = companhia_elem.get_attribute("alt").strip()
+                except NoSuchElementException:
+                    dados_voo["Companhia_Aerea"] = "N/A"
+                    print("Erro: Companhia Aérea não encontrada.")
+                
+                # Lógica de detecção de Escalas baseada em texto
+                if "direto" in texto_voo:
+                    dados_voo["Escalas"] = "Direto"
+                elif "escala" in texto_voo:
+                    match = re.search(r"(\d+)\s+escala", texto_voo)
+                    dados_voo["Escalas"] = f"{match.group(1)} escala(s)" if match else "Escala"
+                else:
+                    dados_voo["Escalas"] = "N/A"
+                
+                try:
+                    hora_ida_elem = voo.find_element(By.CSS_SELECTOR, "itinerary-element.leave .hour")
+                    dados_voo["Hora_Ida"] = hora_ida_elem.text.strip()
+                except NoSuchElementException:
+                    dados_voo["Hora_Ida"] = "N/A"
+                    print("Erro: Hora de ida não encontrada.")
+
+                try:
+                    hora_volta_elem = voo.find_element(By.CSS_SELECTOR, "itinerary-element.arrive .hour")
+                    dados_voo["Hora_Volta"] = hora_volta_elem.text.strip()
+                except NoSuchElementException:
+                    dados_voo["Hora_Volta"] = "N/A"
+                    print("Erro: Hora de volta não encontrada.")
+
+                # Extração das siglas dos aeroportos de ida e volta
+                try:
+                    aeroportos_elem = voo.find_elements(By.CSS_SELECTOR, 'span.different-airport')
+                    if len(aeroportos_elem) >= 2:
+                        dados_voo["Aeroporto_Ida"] = aeroportos_elem[0].text.strip()
+                        dados_voo["Aeroporto_Volta"] = aeroportos_elem[1].text.strip()
+                    else:
+                        dados_voo["Aeroporto_Ida"] = "N/A"
+                        dados_voo["Aeroporto_Volta"] = "N/A"
+                        print("Aviso: Não foram encontrados 2 aeroportos para esta opção de voo.")
+                except NoSuchElementException:
+                    dados_voo["Aeroporto_Ida"] = "N/A"
+                    dados_voo["Aeroporto_Volta"] = "N/A"
+                    print("Erro: Aeroportos não encontrados.")
+                
+                # Adiciona as informações fixas da busca
+                dados_voo["Origem"] = origem
+                dados_voo["Destino"] = destino
+                dados_voo["Data_Ida"] = data_ida
+                dados_voo["Data_Volta"] = data_volta
+                dados_voo["Data_Extracao"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
                 print("-" * 50)
-                print(texto_voo)
+                print(f"Dados extraídos: {dados_voo}")
+
+                voos_dados.append(dados_voo)
+        
         else:
             print("Nenhum voo encontrado no seletor.")
 
-        if voos_extraidos:
-        #     nome_arquivo_json = f"voos_{origem}_para_{destino}.json"
-        #     with open(nome_arquivo_json, "w", encoding="utf-8") as f:
-        #         json.dump(voos_extraidos, f, ensure_ascii=False, indent=4)
-        #     print(f"\nDados salvos em {nome_arquivo_json}")
-            # sigla_destino = voo.find_element(By.CSS_SELECTOR, ".different-airport").text.strip()
-            # print(f"Aeroporto: {sigla_destino}")
-            # cidade_destino = voo.find_element(By.CSS_SELECTOR, ".route-info-item-city-arrival span").text.strip()
-            # print(f"Cidade: {cidade_destino}")
-            # companhia_elem = voo.find_element(By.CSS_SELECTOR, "airline-logo img")
-            # companhia = companhia_elem.get_attribute("alt").strip() if companhia_elem else "N/A"
-            # print(f"Companhia: {companhia}")
-            # texto_voo = voo.text.lower()
-            # leave_elems = voo.find_elements(By.CSS_SELECTOR, "itinerary-element.leave .hour")
-            # hora_ida = leave_elems[0].text.strip() if leave_elems else "N/A"
+        if voos_dados:
+            nome_arquivo_csv = "passagens.csv"
+            # Nomes das colunas fixos para evitar erros
+            fieldnames = ["Preco_Por_Adulto", "Total_Adultos", "Taxas", "Preco_Final", "Companhia_Aerea", "Escalas", "Hora_Ida", "Hora_Volta", "Aeroporto_Ida", "Aeroporto_Volta", "Origem", "Destino", "Data_Ida", "Data_Volta", "Data_Extracao"]
 
-            # # Horário de volta
-            # arrive_elems = voo.find_elements(By.CSS_SELECTOR, "itinerary-element.arrive .hour")
-            # hora_volta = arrive_elems[0].text.strip() if arrive_elems else "N/A"
-
-
-            # print(f"Hora Ida: {hora_ida} | Hora Volta: {hora_volta}")
-            #  # Detecta escala
-            # if "direto" in texto_voo:
-            #     escala = "Direto"
-            # elif "escala" in texto_voo:
-            #     import re
-            #     match = re.search(r"(\d+)\s+escala", texto_voo)
-            #     escala = f"{match.group(1)} escala(s)" if match else "Escala"
-            # else:
-            #     escala = "N/A"
-
-            # print("Escala:", escala)
-
-            # precos = voo.find_elements(By.CSS_SELECTOR, ".amount.price-amount")
-            # preco_por_adulto = precos[0].text if len(precos) > 0 else "N/A"
-            # total_adultos = precos[1].text if len(precos) > 1 else "N/A"
-            # taxas = precos[2].text if len(precos) > 2 else "N/A"
-            # preco_final = precos[3].text if len(precos) > 3 else "N/A"
-            # print(f"Preço por adulto: {preco_por_adulto}, Total adultos: {total_adultos}, Taxas: {taxas}, Preço final: {preco_final}")
-           
-            # nome_arquivo_csv = f"voos_{origem}_para_{destino}.csv"
-            with open('passagens.csv', "a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                #writer.writeheader()
-                writer.writerow(["Dados do Voo"])
-                for voo in voos_extraidos:
-                    writer.writerow([voo])
-                    #writer.writerow({"ida": voo[2]})
-            print(f"Dados salvos em passagens.csv")
+            with open(nome_arquivo_csv, "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                if not os.path.isfile(nome_arquivo_csv) or os.stat(nome_arquivo_csv).st_size == 0:
+                    writer.writeheader()
+                writer.writerows(voos_dados)
+            
+            print(f"Dados estruturados salvos em {nome_arquivo_csv}")
         else:
-            print("Nenhum dado para salvar. Arquivos JSON e CSV não foram criados.")
+            print("Nenhum dado para salvar. O arquivo CSV não foi atualizado.")
 
     except TimeoutException:
         print("Timeout: Não foi possível capturar os resultados dentro do tempo limite.")
         print("Verifique se a URL está correta ou se os seletores CSS mudaram.")
     except Exception as e:
-        print(f"Ocorreu um erro: {e}")
+        print(f"Ocorreu um erro inesperado: {e}")
     finally:
+        # Bloco finally para garantir que o HTML seja salvo e o navegador seja fechado
         html_content = driver.page_source
         nome_pagina_html = f"pagina_{origem}_para_{destino}.html"
         with open(nome_pagina_html, "a", encoding="utf-8") as f:
             f.write(html_content)
-        
-        time.sleep(5)
+        print(f"Página HTML salva em {nome_pagina_html}")
         driver.quit()
 
 if __name__ == "__main__":
     data_hora_atual = datetime.now()
-    print("Data e hora atuais:", data_hora_atual)
+    print("Iniciando a busca de voos. Data e hora atuais:", data_hora_atual)
     for destino in destinos:
-        buscar_voo("SAO", destino, "2025-12-22", "2025-12-29") 
+        buscar_voo("SAO", destino, "2025-12-22", "2025-12-29")
         #buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
+        time.sleep(10) # Pausa entre as buscas para evitar ser bloqueado
