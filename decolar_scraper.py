@@ -10,8 +10,7 @@ import csv
 import os
 from datetime import datetime
 
-destinos = ["REC"]
-# destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
+destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
 
 def buscar_voo(origem, destino, data_ida, data_volta):
     """
@@ -122,19 +121,22 @@ def buscar_voo(origem, destino, data_ida, data_volta):
                     print("Erro: Hora de volta não encontrada.")
 
                 # Extração das siglas dos aeroportos de ida e volta
+                # Extração das siglas dos aeroportos de ida e volta
                 try:
-                    aeroportos_elem = voo.find_elements(By.CSS_SELECTOR, 'span.different-airport')
+                    aeroportos_elem = voo.find_elements(By.CSS_SELECTOR, 'span[tooltip-id="popup-airport"]')
+                    
                     if len(aeroportos_elem) >= 2:
                         dados_voo["Aeroporto_Ida"] = aeroportos_elem[0].text.strip()
-                        dados_voo["Aeroporto_Volta"] = aeroportos_elem[1].text.strip()
+                        dados_voo["Aeroporto_Destino"] = aeroportos_elem[1].text.strip()
                     else:
                         dados_voo["Aeroporto_Ida"] = "N/A"
-                        dados_voo["Aeroporto_Volta"] = "N/A"
+                        dados_voo["Aeroporto_Destino"] = "N/A"
                         print("Aviso: Não foram encontrados 2 aeroportos para esta opção de voo.")
                 except NoSuchElementException:
                     dados_voo["Aeroporto_Ida"] = "N/A"
-                    dados_voo["Aeroporto_Volta"] = "N/A"
+                    dados_voo["Aeroporto_Destino"] = "N/A"
                     print("Erro: Aeroportos não encontrados.")
+
                 
                 # Adiciona as informações fixas da busca
                 dados_voo["Origem"] = origem
@@ -154,7 +156,7 @@ def buscar_voo(origem, destino, data_ida, data_volta):
         if voos_dados:
             nome_arquivo_csv = "passagens.csv"
             # Nomes das colunas fixos para evitar erros
-            fieldnames = ["Preco_Por_Adulto", "Total_Adultos", "Taxas", "Preco_Final", "Companhia_Aerea", "Escalas", "Hora_Ida", "Hora_Volta", "Aeroporto_Ida", "Aeroporto_Volta", "Origem", "Destino", "Data_Ida", "Data_Volta", "Data_Extracao"]
+            fieldnames = ["Preco_Por_Adulto", "Total_Adultos", "Taxas", "Preco_Final", "Companhia_Aerea", "Escalas", "Hora_Ida", "Hora_Volta", "Aeroporto_Ida", "Aeroporto_Destino", "Origem", "Destino", "Data_Ida", "Data_Volta", "Data_Extracao"]
 
             with open(nome_arquivo_csv, "a", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -185,5 +187,5 @@ if __name__ == "__main__":
     print("Iniciando a busca de voos. Data e hora atuais:", data_hora_atual)
     for destino in destinos:
         buscar_voo("SAO", destino, "2025-12-22", "2025-12-29")
-        #buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
+        buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
         time.sleep(10) # Pausa entre as buscas para evitar ser bloqueado
