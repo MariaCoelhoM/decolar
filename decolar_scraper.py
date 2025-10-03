@@ -47,7 +47,8 @@ def buscar_voo(origem, destino, data_ida, data_volta):
     try:
         try:
             # Tenta fechar o popup de cookies
-            popup = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Aceitar')]")))
+            # popup = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Aceitar')]")))
+            popup = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Agora não')]")))
             popup.click()
             print("Popup de cookies fechado.")
         except TimeoutException:
