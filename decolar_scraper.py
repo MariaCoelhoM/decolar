@@ -9,8 +9,8 @@ import time
 import csv
 import os
 from datetime import datetime
-
-destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
+destinos = ["REC"]
+#destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
 
 def buscar_voo(origem, destino, data_ida, data_volta):
     """
@@ -187,6 +187,6 @@ if __name__ == "__main__":
     data_hora_atual = datetime.now()
     print("Iniciando a busca de voos. Data e hora atuais:", data_hora_atual)
     for destino in destinos:
-        buscar_voo("SAO", destino, "2025-12-22", "2025-12-29")
+        #buscar_voo("SAO", destino, "2025-12-22", "2025-12-29")
         buscar_voo("SAO", destino, "2025-12-29", "2026-01-05") 
         time.sleep(10) # Pausa entre as buscas para evitar ser bloqueado
