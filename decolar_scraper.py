@@ -72,13 +72,17 @@ def buscar_voo(origem, destino, data_ida, data_volta):
                 # Extração de preços
                 try:
                     precos = voo.find_elements(By.CSS_SELECTOR, ".amount.price-amount")
-                    if len(precos) >= 4:
-                        dados_voo["Preco_Por_Adulto"] = precos[0].text.strip()
-                        dados_voo["Total_Adultos"] = precos[1].text.strip()
-                        dados_voo["Taxas"] = precos[2].text.strip()
-                        dados_voo["Preco_Final"] = precos[3].text.strip()
+
+                     # AGORA basta verificar se existe pelo menos 1 preço
+                    if len(precos) >= 1:
+                        preco_final = precos[0].text.strip()
+                        dados_voo["Preco_Por_Adulto"] = "N/A"   # não existe mais no HTML
+                        dados_voo["Total_Adultos"] = "N/A"      # não existe mais
+                        dados_voo["Taxas"] = "N/A"              # não existe mais
+                        dados_voo["Preco_Final"] = preco_final  # único valor válido
+
                     else:
-                        print("Aviso: Nem todos os elementos de preço foram encontrados.")
+                        print("Aviso: Nenhum preço foi encontrado.")
                         dados_voo["Preco_Por_Adulto"] = "N/A"
                         dados_voo["Total_Adultos"] = "N/A"
                         dados_voo["Taxas"] = "N/A"
