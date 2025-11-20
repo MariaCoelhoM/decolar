@@ -10,8 +10,7 @@ import csv
 import os
 from datetime import datetime
 
-destinos = ["RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
-#destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
+destinos = ["REC", "POA", "FOR", "RIO", "MCZ", "BUE", "ROM", "LON", "MVD", "LIM"]
 
 def buscar_voo(origem, destino, data_ida, data_volta):
     """
